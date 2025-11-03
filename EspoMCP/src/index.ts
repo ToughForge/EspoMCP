@@ -71,6 +71,11 @@ async function main() {
     await server.connect(transport);
     
     logger.info('EspoCRM MCP Server started successfully');
+
+    // Keep process alive when using a transport that does not create its own event loop
+    // This prevents the container from exiting immediately after startup.
+    // The process will still exit on SIGINT/SIGTERM handlers defined below.
+    await new Promise(() => {});
     
   } catch (error: any) {
     logger.error('Failed to start EspoCRM MCP Server', { 
