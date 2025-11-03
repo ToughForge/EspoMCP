@@ -77,6 +77,7 @@ async function main() {
     // Use a lightweight periodic timer which keeps the event loop busy reliably across
     // transpilation targets and runtimes.
     setInterval(() => {}, 1_000_000_000);
+    logger.info('Endless promise ended :(')
     
   } catch (error: any) {
     logger.error('Failed to start EspoCRM MCP Server', { 
