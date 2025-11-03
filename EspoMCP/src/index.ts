@@ -74,8 +74,9 @@ async function main() {
 
     // Keep process alive when using a transport that does not create its own event loop
     // This prevents the container from exiting immediately after startup.
-    // The process will still exit on SIGINT/SIGTERM handlers defined below.
-    await new Promise(() => {});
+    // Use a lightweight periodic timer which keeps the event loop busy reliably across
+    // transpilation targets and runtimes.
+    setInterval(() => {}, 1_000_000_000);
     
   } catch (error: any) {
     logger.error('Failed to start EspoCRM MCP Server', { 
