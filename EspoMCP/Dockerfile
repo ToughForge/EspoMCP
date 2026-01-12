@@ -42,4 +42,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 EXPOSE 3000
 
-CMD ["node", "build/index.js"]
+CMD ["node", "build/src/index.js"]
