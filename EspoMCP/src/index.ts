@@ -23,66 +23,80 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { loadConfig, validateConfiguration } from "./config/index.js";
 import { setupEspoCRMTools } from "./tools/index.js";
 import logger from "./utils/logger.js";
+import { startHttpServer } from "./http-server.js";
+
+/**
+ * Start the server with stdio transport (default, for CLI-based MCP clients).
+ */
+async function startStdioServer(): Promise<void> {
+  // Validate environment configuration
+  const configErrors = validateConfiguration();
+  if (configErrors.length > 0) {
+    logger.error('Configuration validation failed', { errors: configErrors });
+    console.error('Configuration errors:');
+    configErrors.forEach(error => console.error(`  - ${error}`));
+    console.error('\nPlease check your environment variables and try again.');
+    console.error('See .env.example for required configuration.');
+    process.exit(1);
+  }
+
+  // Load configuration
+  const config = loadConfig();
+  logger.info('Configuration loaded successfully', {
+    espoUrl: config.espocrm.baseUrl,
+    authMethod: config.espocrm.authMethod,
+    rateLimit: config.server.rateLimit
+  });
+
+  // Create MCP server
+  const server = new Server(
+    {
+      name: "EspoCRM Integration Server",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  logger.info('MCP server created', { name: "EspoCRM Integration Server" });
+
+  // Setup EspoCRM tools
+  await setupEspoCRMTools(server, config);
+
+  // Create transport
+  const transport = new StdioServerTransport();
+  logger.info('Starting MCP server with stdio transport');
+
+  // Start server
+  await server.connect(transport);
+
+  logger.info('EspoCRM MCP Server started successfully');
+
+  // Keep process alive when using a transport that does not create its own event loop
+  setInterval(() => {}, 1_000_000_000);
+}
 
 async function main() {
   try {
-    // Validate environment configuration
-    const configErrors = validateConfiguration();
-    if (configErrors.length > 0) {
-      logger.error('Configuration validation failed', { errors: configErrors });
-      console.error('Configuration errors:');
-      configErrors.forEach(error => console.error(`  - ${error}`));
-      console.error('\nPlease check your environment variables and try again.');
-      console.error('See .env.example for required configuration.');
-      process.exit(1);
-    }
-    
-    // Load configuration
-    const config = loadConfig();
-    logger.info('Configuration loaded successfully', { 
-      espoUrl: config.espocrm.baseUrl,
-      authMethod: config.espocrm.authMethod,
-      rateLimit: config.server.rateLimit 
-    });
-    
-    // Create MCP server
-    const server = new Server(
-      {
-        name: "EspoCRM Integration Server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
-    
-    logger.info('MCP server created', { name: "EspoCRM Integration Server" });
-    
-    // Setup EspoCRM tools
-    await setupEspoCRMTools(server, config);
-    
-    // Create transport
-    const transport = new StdioServerTransport();
-    logger.info('Starting MCP server with stdio transport');
-    
-    // Start server
-    await server.connect(transport);
-    
-    logger.info('EspoCRM MCP Server started successfully');
+    // Check for transport mode
+    const transport = process.env.MCP_TRANSPORT?.toLowerCase() || 'stdio';
+    const httpPort = parseInt(process.env.HTTP_PORT || '3000', 10);
 
-    // Keep process alive when using a transport that does not create its own event loop
-    // This prevents the container from exiting immediately after startup.
-    // Use a lightweight periodic timer which keeps the event loop busy reliably across
-    // transpilation targets and runtimes.
-    setInterval(() => {}, 1_000_000_000);
-    logger.info('Endless promise ended :(')
-    
+    if (transport === 'http') {
+      logger.info('Starting in HTTP transport mode', { port: httpPort });
+      await startHttpServer(httpPort);
+    } else {
+      logger.info('Starting in stdio transport mode');
+      await startStdioServer();
+    }
+
   } catch (error: any) {
-    logger.error('Failed to start EspoCRM MCP Server', { 
+    logger.error('Failed to start EspoCRM MCP Server', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     });
     console.error('Failed to start server:', error.message);
     process.exit(1);

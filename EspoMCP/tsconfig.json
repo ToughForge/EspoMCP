@@ -10,17 +10,17 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "./build",
-    "rootDir": "./src",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "allowImportingTsExtensions": false,
     "noEmitOnError": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
-    "build",
-    "tests"
+    "build"
   ]
 }
