@@ -137,10 +137,17 @@ export function formatGenericEntityResults(entities: GenericEntity[], entityType
   
   const formatted = entities.map(entity => {
     // Try to find common display fields
-    const name = entity.name || entity.firstName && entity.lastName ? `${entity.firstName} ${entity.lastName}` : entity.id;
+    let name = entity.name;
+    if (!name && (entity.firstName || entity.lastName)) {
+      name = `${entity.firstName || ''} ${entity.lastName || ''}`.trim();
+    }
+    if (!name) {
+      name = 'Unnamed';
+    }
+    const id = entity.id ? ` [${entity.id}]` : '';
     const email = entity.emailAddress ? ` (${entity.emailAddress})` : '';
     const status = entity.status ? ` | Status: ${entity.status}` : '';
-    return `${name}${email}${status}`;
+    return `${name}${id}${email}${status}`;
   }).join('\n');
   
   return `Found ${entities.length} ${entityType} record${entities.length === 1 ? '' : 's'}:\n${formatted}`;

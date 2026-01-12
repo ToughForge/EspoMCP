@@ -7,11 +7,46 @@
 import request from 'supertest';
 import express from 'express';
 
+// Mock metadata response
+const mockMetadataResponse = {
+  entityDefs: {
+    Contact: {
+      fields: {
+        firstName: { type: 'varchar', required: true },
+        lastName: { type: 'varchar', required: true },
+        emailAddress: { type: 'email' },
+      },
+      links: {},
+    },
+    Account: {
+      fields: {
+        name: { type: 'varchar', required: true },
+      },
+      links: {},
+    },
+  },
+  scopes: {
+    Contact: { entity: true },
+    Account: { entity: true },
+  },
+};
+
+// Mock I18n response
+const mockI18nResponse = {
+  Contact: { fields: { firstName: 'First Name' }, labels: {}, tooltips: {} },
+  Account: { fields: { name: 'Name' }, labels: {}, tooltips: {} },
+};
+
 // Create mock functions before any imports that use them
 const mockTestConnection = jest.fn().mockResolvedValue({
   success: true,
   user: { userName: 'test-user' },
   version: '8.0.0'
+});
+const mockGet = jest.fn().mockImplementation((endpoint: string) => {
+  if (endpoint === 'Metadata') return Promise.resolve(mockMetadataResponse);
+  if (endpoint === 'I18n') return Promise.resolve(mockI18nResponse);
+  return Promise.resolve({});
 });
 const mockSearch = jest.fn().mockResolvedValue({ list: [], total: 0 });
 const mockGetById = jest.fn().mockResolvedValue({ id: 'test-id', name: 'Test' });
@@ -24,6 +59,7 @@ jest.mock('../src/espocrm/client.js', () => ({
   __esModule: true,
   EspoCRMClient: jest.fn().mockImplementation(() => ({
     testConnection: mockTestConnection,
+    get: mockGet,
     search: mockSearch,
     getById: mockGetById,
     post: mockPost,
@@ -113,14 +149,15 @@ describe('EspoMCP HTTP Server', () => {
         .expect(200);
 
       const toolNames = response.body.result.tools.map((t: any) => t.name);
-      expect(toolNames).toContain('create_contact');
-      expect(toolNames).toContain('search_contacts');
-      expect(toolNames).toContain('create_account');
+      expect(toolNames).toContain('create_Contact');
+      expect(toolNames).toContain('search_Contact');
+      expect(toolNames).toContain('create_Account');
+      expect(toolNames).toContain('health_check');
     });
   });
 
   describe('POST /mcp - tools/call', () => {
-    it('should execute search_contacts tool', async () => {
+    it('should execute search_Contact tool', async () => {
       const response = await request(app)
         .post('/mcp')
         .send({
@@ -128,7 +165,7 @@ describe('EspoMCP HTTP Server', () => {
           id: 3,
           method: 'tools/call',
           params: {
-            name: 'search_contacts',
+            name: 'search_Contact',
             arguments: { limit: 10 }
           }
         })
@@ -139,7 +176,7 @@ describe('EspoMCP HTTP Server', () => {
       expect(response.body.result).toHaveProperty('content');
     });
 
-    it('should return error for unknown tool', async () => {
+    it('should return error result for unknown tool', async () => {
       const response = await request(app)
         .post('/mcp')
         .send({
@@ -155,8 +192,10 @@ describe('EspoMCP HTTP Server', () => {
 
       expect(response.body.jsonrpc).toBe('2.0');
       expect(response.body.id).toBe(4);
-      expect(response.body.error).toBeDefined();
-      expect(response.body.error.message).toContain('Unknown tool');
+      // With dynamic tools, unknown tools return a result with isError=true rather than a JSON-RPC error
+      expect(response.body.result).toBeDefined();
+      expect(response.body.result.isError).toBe(true);
+      expect(response.body.result.content[0].text).toContain('Unknown tool');
     });
   });
 

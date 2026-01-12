@@ -7,11 +7,58 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
+// Mock metadata response
+const mockMetadataResponse = {
+  entityDefs: {
+    Contact: {
+      fields: {
+        firstName: { type: 'varchar', required: true },
+        lastName: { type: 'varchar', required: true },
+        emailAddress: { type: 'email' },
+        phoneNumber: { type: 'phone' },
+        description: { type: 'text' },
+      },
+      links: {},
+    },
+    Account: {
+      fields: {
+        name: { type: 'varchar', required: true },
+        website: { type: 'url' },
+        description: { type: 'text' },
+      },
+      links: {},
+    },
+  },
+  scopes: {
+    Contact: { entity: true },
+    Account: { entity: true },
+  },
+};
+
+// Mock I18n response
+const mockI18nResponse = {
+  Contact: {
+    fields: { firstName: 'First Name', lastName: 'Last Name' },
+    labels: { 'Create Contact': 'Create Contact' },
+    tooltips: {},
+  },
+  Account: {
+    fields: { name: 'Name' },
+    labels: { 'Create Account': 'Create Account' },
+    tooltips: {},
+  },
+};
+
 // Create mock functions
 const mockTestConnection = jest.fn().mockResolvedValue({
   success: true,
   user: { userName: 'test-user' },
   version: '8.0.0'
+});
+const mockGet = jest.fn().mockImplementation((endpoint: string) => {
+  if (endpoint === 'Metadata') return Promise.resolve(mockMetadataResponse);
+  if (endpoint === 'I18n') return Promise.resolve(mockI18nResponse);
+  return Promise.resolve({});
 });
 const mockSearch = jest.fn().mockResolvedValue({ list: [], total: 0 });
 const mockGetById = jest.fn().mockResolvedValue({ id: 'test-id', name: 'Test' });
@@ -24,6 +71,7 @@ jest.mock('../src/espocrm/client.js', () => ({
   __esModule: true,
   EspoCRMClient: jest.fn().mockImplementation(() => ({
     testConnection: mockTestConnection,
+    get: mockGet,
     search: mockSearch,
     getById: mockGetById,
     post: mockPost,
@@ -101,11 +149,13 @@ describe('EspoMCP Stdio Server', () => {
       const result = await toolsListHandler!({});
       const toolNames = result.tools.map((t: any) => t.name);
 
-      // Check for essential tools
-      expect(toolNames).toContain('create_contact');
-      expect(toolNames).toContain('search_contacts');
-      expect(toolNames).toContain('create_account');
-      expect(toolNames).toContain('search_accounts');
+      // Check for essential dynamically generated tools
+      expect(toolNames).toContain('create_Contact');
+      expect(toolNames).toContain('search_Contact');
+      expect(toolNames).toContain('create_Account');
+      expect(toolNames).toContain('search_Account');
+      // Check for utility tools
+      expect(toolNames).toContain('health_check');
     });
 
     it('should have proper tool schema structure', async () => {
@@ -122,12 +172,12 @@ describe('EspoMCP Stdio Server', () => {
   });
 
   describe('tools/call', () => {
-    it('should handle search_contacts tool call', async () => {
+    it('should handle search_Contact tool call', async () => {
       expect(toolCallHandler).not.toBeNull();
 
       const result = await toolCallHandler!({
         params: {
-          name: 'search_contacts',
+          name: 'search_Contact',
           arguments: { limit: 10 }
         }
       });
@@ -136,13 +186,17 @@ describe('EspoMCP Stdio Server', () => {
       expect(Array.isArray(result.content)).toBe(true);
     });
 
-    it('should throw error for unknown tool', async () => {
-      await expect(toolCallHandler!({
+    it('should return error for unknown tool', async () => {
+      const result = await toolCallHandler!({
         params: {
           name: 'nonexistent_tool',
           arguments: {}
         }
-      })).rejects.toThrow('Unknown tool: nonexistent_tool');
+      });
+
+      expect(result).toHaveProperty('content');
+      expect(result).toHaveProperty('isError', true);
+      expect(result.content[0].text).toContain('Unknown tool');
     });
   });
 });
