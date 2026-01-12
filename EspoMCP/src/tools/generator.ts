@@ -170,6 +170,11 @@ export class DynamicToolGenerator {
       description: "Sort order",
       default: "asc",
     };
+    properties.caseInsensitive = {
+      type: "boolean",
+      description: "Use case-insensitive matching for text fields",
+      default: false,
+    };
 
     return {
       name: `search_${entity.name}`,

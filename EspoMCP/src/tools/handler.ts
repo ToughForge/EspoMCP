@@ -20,7 +20,7 @@ interface ParsedToolName {
 }
 
 // Standard search parameters
-const SEARCH_PARAMS = new Set(["select", "limit", "offset", "orderBy", "order"]);
+const SEARCH_PARAMS = new Set(["select", "limit", "offset", "orderBy", "order", "caseInsensitive"]);
 
 export class DynamicToolHandler {
   private entitySet: Set<string>;
@@ -147,6 +147,7 @@ export class DynamicToolHandler {
     const offset = (args.offset as number) || 0;
     const orderBy = args.orderBy as string | undefined;
     const order = (args.order as "asc" | "desc") || "asc";
+    const caseInsensitive = (args.caseInsensitive as boolean) || false;
 
     // Build where clauses from remaining args
     const filterArgs: Record<string, unknown> = {};
@@ -156,7 +157,7 @@ export class DynamicToolHandler {
       }
     }
 
-    const where = this.buildWhereClause(filterArgs);
+    const where = this.buildWhereClause(filterArgs, caseInsensitive);
 
     const result = await this.client.search(entityType, {
       where: where.length > 0 ? where : undefined,
@@ -246,15 +247,17 @@ export class DynamicToolHandler {
 
   /**
    * Build EspoCRM where clause from filter arguments.
+   * @param filters - Key-value pairs to filter by
+   * @param caseInsensitive - If true, use case-insensitive matching for strings
    */
-  private buildWhereClause(filters: Record<string, unknown>): WhereClause[] {
+  private buildWhereClause(filters: Record<string, unknown>, caseInsensitive = false): WhereClause[] {
     const where: WhereClause[] = [];
 
     for (const [key, value] of Object.entries(filters)) {
       if (value === undefined || value === null || value === "") continue;
 
       if (typeof value === "string" && value.includes("*")) {
-        // Wildcard search - use contains
+        // Wildcard search - use contains (already case-insensitive)
         where.push({
           type: "contains",
           attribute: key,
@@ -264,6 +267,13 @@ export class DynamicToolHandler {
         // Array values use "in" operator
         where.push({
           type: "in",
+          attribute: key,
+          value,
+        });
+      } else if (typeof value === "string" && caseInsensitive) {
+        // Case-insensitive string match - use contains for partial match
+        where.push({
+          type: "contains",
           attribute: key,
           value,
         });
