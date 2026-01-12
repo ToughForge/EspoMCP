@@ -24,6 +24,7 @@ import { loadConfig, validateConfiguration } from "./config/index.js";
 import { setupEspoCRMTools } from "./tools/index.js";
 import logger from "./utils/logger.js";
 import { startHttpServer } from "./http-server.js";
+import { startStreamableHttpServer } from "./http-streamable.js";
 
 /**
  * Start the server with stdio transport (default, for CLI-based MCP clients).
@@ -85,8 +86,11 @@ async function main() {
     const transport = process.env.MCP_TRANSPORT?.toLowerCase() || 'stdio';
     const httpPort = parseInt(process.env.HTTP_PORT || '3000', 10);
 
-    if (transport === 'http') {
-      logger.info('Starting in HTTP transport mode', { port: httpPort });
+    if (transport === 'streamable-http' || transport === 'streamable') {
+      logger.info('Starting in Streamable HTTP transport mode', { port: httpPort });
+      await startStreamableHttpServer(httpPort);
+    } else if (transport === 'http') {
+      logger.info('Starting in HTTP transport mode (legacy JSON-RPC)', { port: httpPort });
       await startHttpServer(httpPort);
     } else {
       logger.info('Starting in stdio transport mode');
