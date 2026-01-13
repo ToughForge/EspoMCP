@@ -1,0 +1,35 @@
+services:
+  espocrm-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: espocrm-mcp-server
+    restart: unless-stopped
+    ports:
+      - "8196:3000"
+    environment:
+      - NODE_ENV=production
+      - ESPOCRM_URL=${ESPOCRM_URL}
+      - ESPOCRM_API_KEY=${ESPOCRM_API_KEY}
+      - ESPOCRM_AUTH_METHOD=${ESPOCRM_AUTH_METHOD:-apikey}
+      - ESPOCRM_SECRET_KEY=${ESPOCRM_SECRET_KEY:-}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-streamable-http}
+      - RATE_LIMIT=${RATE_LIMIT:-100}
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - espocrm-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.request({hostname: 'localhost', port: 3000, path: '/health', timeout: 2000}, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  espocrm-network:
+    driver: bridge
+  n8n_default:
+    external: true

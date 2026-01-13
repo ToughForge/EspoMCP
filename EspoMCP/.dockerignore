@@ -2,10 +2,6 @@
 node_modules/
 npm-debug.log*
 
-# Source files (only built files should be included)
-src/
-tests/
-
 # Development files
 .env
 .env.local
@@ -44,3 +40,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Tests
+tests/

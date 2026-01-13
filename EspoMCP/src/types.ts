@@ -1,6 +1,6 @@
 export interface EspoCRMConfig {
   baseUrl: string;
-  apiKey: string;
+  apiKey?: string;  // Optional - can be passed via header in HTTP mode
   authMethod: 'apikey' | 'hmac';
   secretKey?: string;
 }
