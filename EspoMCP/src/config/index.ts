@@ -4,7 +4,7 @@ import { Config } from "../types.js";
 const ConfigSchema = z.object({
   espocrm: z.object({
     baseUrl: z.string().url("ESPOCRM_URL must be a valid URL"),
-    apiKey: z.string().min(1, "ESPOCRM_API_KEY is required"),
+    apiKey: z.string().optional(), // Optional - can be passed via header in HTTP mode
     authMethod: z.enum(['apikey', 'hmac']).default('apikey'),
     secretKey: z.string().optional(),
   }),
@@ -43,15 +43,17 @@ export function loadConfig(): Config {
 
 export function validateConfiguration(): string[] {
   const errors: string[] = [];
-  
+  const transport = process.env.MCP_TRANSPORT?.toLowerCase() || 'stdio';
+
   if (!process.env.ESPOCRM_URL) {
     errors.push("ESPOCRM_URL environment variable is required");
   }
-  
-  if (!process.env.ESPOCRM_API_KEY) {
-    errors.push("ESPOCRM_API_KEY environment variable is required");
+
+  // API key is required for stdio transport, optional for HTTP (passed via header)
+  if (!process.env.ESPOCRM_API_KEY && transport === 'stdio') {
+    errors.push("ESPOCRM_API_KEY environment variable is required for stdio transport");
   }
-  
+
   if (process.env.ESPOCRM_URL) {
     try {
       new URL(process.env.ESPOCRM_URL);
@@ -59,10 +61,10 @@ export function validateConfiguration(): string[] {
       errors.push("ESPOCRM_URL must be a valid URL");
     }
   }
-  
+
   if (process.env.ESPOCRM_AUTH_METHOD === 'hmac' && !process.env.ESPOCRM_SECRET_KEY) {
     errors.push("ESPOCRM_SECRET_KEY is required when using HMAC authentication");
   }
-  
+
   return errors;
 }
