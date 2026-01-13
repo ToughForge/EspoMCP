@@ -6,7 +6,7 @@ services:
     container_name: espocrm-mcp-server
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-3000}:8196"
+      - "8196:3000"
     environment:
       - NODE_ENV=production
       - ESPOCRM_URL=${ESPOCRM_URL}
@@ -14,7 +14,6 @@ services:
       - ESPOCRM_AUTH_METHOD=${ESPOCRM_AUTH_METHOD:-apikey}
       - ESPOCRM_SECRET_KEY=${ESPOCRM_SECRET_KEY:-}
       - MCP_TRANSPORT=${MCP_TRANSPORT:-streamable-http}
-      - HTTP_PORT=3000
       - RATE_LIMIT=${RATE_LIMIT:-100}
       - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30000}
       - LOG_LEVEL=${LOG_LEVEL:-info}
