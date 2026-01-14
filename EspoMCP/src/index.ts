@@ -84,7 +84,7 @@ async function main() {
   try {
     // Check for transport mode
     const transport = process.env.MCP_TRANSPORT?.toLowerCase() || 'stdio';
-    const httpPort = parseInt(process.env.HTTP_PORT || '3000', 10);
+    const httpPort = parseInt(process.env.HTTP_PORT || '80', 10);
 
     if (transport === 'streamable-http' || transport === 'streamable') {
       logger.info('Starting in Streamable HTTP transport mode', { port: httpPort });

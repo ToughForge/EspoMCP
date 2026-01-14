@@ -6,7 +6,7 @@ services:
     container_name: espocrm-mcp-server
     restart: unless-stopped
     ports:
-      - "8196:3000"
+      - "8196:80"
     environment:
       - NODE_ENV=production
       - ESPOCRM_URL=${ESPOCRM_URL}
@@ -22,7 +22,7 @@ services:
     networks:
       - espocrm-network
     healthcheck:
-      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.request({hostname: 'localhost', port: 3000, path: '/health', timeout: 2000}, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
+      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.request({hostname: 'localhost', port: 80, path: '/health', timeout: 2000}, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -40,6 +40,6 @@ ENV LOG_LEVEL=info
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "console.log('Health check - server should be running')" || exit 1
 
-EXPOSE 3000
+EXPOSE 80
 
 CMD ["node", "build/src/index.js"]
